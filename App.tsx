@@ -7,7 +7,8 @@ import {
   FlatList,
   TouchableOpacity,
   Modal,
-  TextInput
+  TextInput,
+  ActivityIndicator
 } from "react-native";
 
 type Todo = {
@@ -41,14 +42,25 @@ const SAMPLE_TODOS: Todo[] = [
 type Mode = "list" | "add";
 
 const App: FC = () => {
+  const [ready, setReady] = useState(false);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [mode, setMode] = useState<Mode>("list");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
+  const getReady = () => {
+    setTodos(SAMPLE_TODOS);
+
+    setReady(true);
+  };
+
   const addTodo = (todo: Todo) => {
     setTodos(todos => [...todos, todo]);
+  };
+
+  const deleteTodo = (id: number) => {
+    setTodos(todos => todos.filter(todo => todo.id !== id));
   };
 
   const changeMode = (mode: Mode) => {
@@ -58,6 +70,10 @@ const App: FC = () => {
   const resetInput = () => {
     setTitle("");
     setDescription("");
+  };
+
+  const handleDelete = (id: number) => {
+    deleteTodo(id);
   };
 
   const handlePlus = () => {
@@ -72,7 +88,7 @@ const App: FC = () => {
     if (!title || !description) return;
 
     const newTodo: Todo = {
-      id: todos[todos.length - 1].id + 1,
+      id: todos.length === 0 ? 1 : todos[todos.length - 1].id + 1,
       title,
       description,
       done: false
@@ -83,41 +99,59 @@ const App: FC = () => {
   };
 
   useEffect(() => {
+    getReady();
+  }, []);
+
+  useEffect(() => {
     if (mode === "list") {
       resetInput();
     }
   }, [mode]);
 
-  useEffect(() => {
-    setTodos(SAMPLE_TODOS);
-  }, []);
-
   return (
     <Fragment>
       <SafeAreaView style={styles.safearea}>
         <View style={styles.container}>
-          <Text style={styles.title}>Todos</Text>
+          <View style={styles.title_container}>
+            <Text style={styles.title}>Todo List</Text>
+          </View>
           <View style={styles.plus_button}>
             <TouchableOpacity onPress={handlePlus}>
               <Text style={styles.plus}>+</Text>
             </TouchableOpacity>
           </View>
-          <FlatList
-            data={todos}
-            renderItem={({ item: todo }) => {
-              return (
-                <View style={styles.todo}>
-                  <Text style={styles.todo_title}>{todo.title}</Text>
-                  <Text style={styles.todo_description}>
-                    {todo.description}
-                  </Text>
+          {ready ? (
+            <FlatList
+              data={todos}
+              renderItem={({ item: todo }) => {
+                return (
+                  <View style={styles.todo}>
+                    <View>
+                      <Text style={styles.todo_title}>{todo.title}</Text>
+                      <Text style={styles.todo_description}>
+                        {todo.description}
+                      </Text>
+                    </View>
+                    <View style={styles.cross_button}>
+                      <TouchableOpacity onPress={() => handleDelete(todo.id)}>
+                        <Text style={styles.cross}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }}
+              ListEmptyComponent={() => (
+                <View style={styles.empty_container}>
+                  <Text style={styles.empty}>Add Todo !!</Text>
                 </View>
-              );
-            }}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            keyExtractor={(_, index) => index.toString()}
-            contentContainerStyle={styles.content}
-          />
+              )}
+              keyExtractor={(_, index) => index.toString()}
+            />
+          ) : (
+            <View style={styles.loading_container}>
+              <ActivityIndicator size={"large"} />
+            </View>
+          )}
         </View>
       </SafeAreaView>
       <Modal visible={mode === "add"} animationType={"slide"}>
@@ -164,6 +198,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1
   },
+  title_container: {
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderColor: "gray"
+  },
   title: {
     fontSize: 32,
     fontWeight: "bold",
@@ -184,16 +223,28 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "royalblue"
   },
-  content: {
-    width: "100%",
+  loading_container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  empty_container: {
     marginTop: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "gray"
+    alignItems: "center"
+  },
+  empty: {
+    fontSize: 20,
+    fontWeight: "400",
+    color: "darkgray"
   },
   todo: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 15,
-    paddingHorizontal: 20
+    paddingHorizontal: 25,
+    borderBottomWidth: 1,
+    borderColor: "gray"
   },
   todo_title: {
     fontSize: 24
@@ -201,6 +252,14 @@ const styles = StyleSheet.create({
   todo_description: {
     fontSize: 16,
     marginTop: 5
+  },
+  cross_button: {
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  cross: {
+    fontSize: 32,
+    color: "coral"
   },
   separator: {
     height: 1,
